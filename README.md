@@ -23,3 +23,10 @@ In a large enterprise conference or seminar, stakeholders expect a polished, com
 ### Value
 
 Automating this task saves hours of manual editing, ensures nothing important is omitted, and raises the quality of the deliverable by replacing casual speech with executive-ready language while preserving the actual intent of each participant.
+
+### Prototype CLI
+
+1. **Install requirements**: `pip install openai` and export `OPENAI_API_KEY` to point at a valid key before running the script.
+2. **Run the prototype**: execute `python app.py --input path/to/transcript.txt --output recap.txt`. The script prints a timestamped recap with sections such as the event summary, decisions, action items, and formalized quotes, and it writes the same text to `recap.txt`.
+3. **Customize instructions**: pass `--prompt-template` to adjust the user prompt (just include `{transcript}` where the transcript should go) and `--system-instruction` to tweak the assistant role. Change `--model` or `--temperature` if you want a different style.
+4. **Review & distribute**: after generating the record, scan for nuance, then share the saved file with stakeholders or attach it to the official minutes.
