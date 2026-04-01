@@ -1,12 +1,14 @@
 ## Enterprise Conference Meeting Recap
 
-In a large enterprise conference or seminar, stakeholders expect a polished, complete record of what transpired. The session may involve multiple panels, breakout discussions, and live Q&A, and attendees often speak informally or interrupt each other. After the event ends, the organizer needs a meeting record that not only captures who said what, but restructures the conversation into a concise summary with key conclusions and rephrased, professional prose that suits corporate archives or executive distribution.
+In a large enterprise conference or seminar, stakeholders expect a polished, complete record of what transpired. The session may involve multiple panels, breakout discussions, and live Q&A, and attendees often speak informally or interrupt each other. As a professional enterprise administrative assistant, the AI agent ensures the documentation not only captures who said what but also restructures the conversation into a concise summary with key conclusions and rephrased, professional prose that suits corporate archives or executive distribution while minimizing transcription errors or misinterpretations.
 
 ### Workflow
 
-1. **Selection:** The workflow starts with choosing the final transcription or audio recording from the recorded conference session.
-2. **Enrichment:** The system analyzes the raw dialog, detects participants, tags agenda items, converts conversational expressions into formal wording, and distills action items.
-3. **Review:** A human reviewer quickly scans the output, edits for tone if needed, and distributes the completed minutes.
+1. **Selection & Verification:** The AI agent begins by selecting the most complete transcript or high-quality audio recording and cross-checking speaker labels, timestamps, and agenda markers against the official event program to catch missing segments or mislabeled participants.
+2. **Segmentation & Context tagging:** The AI agent maps conference segments to agenda items, flags overlapping conversations, and annotates any references to prior decisions or external documents that will need to be clarified in the recap, reducing the chance of omitting dependencies.
+3. **System Enrichment:** The automated helper consumes the cleaned transcript, detects speaker roles, standardizes terminology, formalizes colloquial language, and surfaces the key decisions, possible risks, and next steps while honoring the intent behind each statement.
+4. **Error Checking:** The AI agent compares the generated recap against the annotated transcript, resolves contradictions (e.g., conflicting dates), confirms unverified claims, and ensures action items have clear owners or asks a human reviewer for verification before finalizing.
+5. **Polish & Distribution:** Once verified, the AI agent tidies the recap for tone consistency, adds metadata (event name, date, attendees), and routes the final document to leadership or archives it for future reference.
 
 ### User
 
