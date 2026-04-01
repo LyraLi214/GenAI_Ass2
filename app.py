@@ -9,12 +9,17 @@ import re
 import textwrap
 from datetime import datetime
 
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+load_dotenv()
+
 try:
-    import openai
-except ImportError as exc:  # pragma: no cover
-    raise SystemExit(
-        "Missing dependency: install the OpenAI client via `pip install openai`."
-    ) from exc
+    api_key = os.environ["GOOGLE_API_KEY"]
+except KeyError:
+    raise SystemExit("Set GOOGLE_API_KEY in your environment (or .env) before running this script.")
+
+genai.configure(api_key=api_key)
 
 FILLER_PATTERN = re.compile(
     r"\b(?:um|uh|er|ah|you know|like|i mean)\b", flags=re.IGNORECASE
@@ -42,33 +47,21 @@ def clean_transcript(raw_transcript: str) -> str:
     return without_fillers.strip()
 
 
-def build_messages(transcript: str, custom_prompt: str) -> list[dict[str, str]]:
+def build_prompt(transcript: str, custom_prompt: str) -> str:
     if not transcript.strip():
         raise ValueError("Transcript input is empty; provide a real transcript file.")
 
-    filled_prompt = custom_prompt.format(transcript=transcript.strip())
-
-    return [
-        {"role": "system", "content": DEFAULT_SYSTEM_INSTRUCTION},
-        {"role": "user", "content": filled_prompt},
-    ]
+    return custom_prompt.format(transcript=transcript.strip())
 
 
-def call_llm(messages: list[dict[str, str]], model: str, temperature: float) -> str:
-    openai.api_key = os.environ.get("OPENAI_API_KEY")
-    if not openai.api_key:
-        raise SystemExit("Set OPENAI_API_KEY in your environment before running this script.")
-
-    response = openai.ChatCompletion.create(
-        model=model,
-        messages=messages,
-        temperature=temperature,
+def call_llm(system_instruction: str, user_input: str, model_name: str) -> str:
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_instruction,
     )
-    choices = response.get("choices") or []
-    if not choices:
-        raise RuntimeError("LLM returned no choices.")
 
-    return choices[0]["message"]["content"].strip()
+    response = model.generate_content(user_input)
+    return response.text.strip()
 
 
 def save_output(contents: str, output_path: str) -> None:
@@ -101,12 +94,16 @@ def main() -> None:
         default=DEFAULT_SYSTEM_INSTRUCTION,
         help="Optional override for the system-style instruction sent to the LLM.",
     )
-    parser.add_argument("--model", default="gpt-4o-mini", help="LLM model to call.")
+    parser.add_argument(
+        "--model",
+        default="gemini-1.5-flash",
+        help="Generative model to call (e.g., gemini-1.5-flash).",
+    )
     parser.add_argument(
         "--temperature",
         type=float,
         default=0.2,
-        help="Temperature for the model: lower = more deterministic.",
+        help="Temperature (unused for Gemini but kept for interface parity).",
     )
 
     args = parser.parse_args()
@@ -118,15 +115,16 @@ def main() -> None:
     original_length = len(transcript)
     cleaned_length = len(cleaned_transcript)
 
-    messages = build_messages(
+    prompt = build_prompt(
         transcript=cleaned_transcript,
         custom_prompt=args.prompt_template,
     )
 
-    if args.system_instruction != DEFAULT_SYSTEM_INSTRUCTION:
-        messages[0]["content"] = args.system_instruction
-
-    recap = call_llm(messages, model=args.model, temperature=args.temperature)
+    recap = call_llm(
+        system_instruction=args.system_instruction,
+        user_input=prompt,
+        model_name=args.model,
+    )
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     structured_output = textwrap.dedent(
