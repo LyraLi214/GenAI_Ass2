@@ -9,20 +9,17 @@ import re
 import textwrap
 from datetime import datetime
 
-import requests
-from dotenv import find_dotenv, load_dotenv
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-dotenv_path = find_dotenv()
-load_dotenv(dotenv_path or ".env")
+load_dotenv()
 
-api_key = os.environ.get("GOOGLE_API_KEY")
-if not api_key:
-    raise SystemExit(
-        "GOOGLE_API_KEY is missing. Populate `.env` (or your shell) with `GOOGLE_API_KEY=<key>` "
-        "and rerun from the repository root."
-    )
+try:
+    api_key = os.environ["GOOGLE_API_KEY"]
+except KeyError:
+    raise SystemExit("Set GOOGLE_API_KEY in your environment (or .env) before running this script.")
 
-REQUEST_TIMEOUT = 15
+genai.configure(api_key=api_key)
 
 FILLER_PATTERN = re.compile(
     r"\b(?:um|uh|er|ah|you know|like|i mean)\b", flags=re.IGNORECASE
@@ -57,54 +54,14 @@ def build_prompt(transcript: str, custom_prompt: str) -> str:
     return custom_prompt.format(transcript=transcript.strip())
 
 
-def call_llm(system_instruction: str, user_input: str, model_name: str, temperature: float) -> str:
-    prompt_text = f"{system_instruction}\n\n{user_input}"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateText"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "prompt": {"text": prompt_text},
-        "temperature": temperature,
-    }
+def call_llm(system_instruction: str, user_input: str, model_name: str) -> str:
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=system_instruction,
+    )
 
-    response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    data = response.json()
-    candidates = data.get("candidates") or []
-    if not candidates:
-        raise RuntimeError("Gemini returned no candidates.")
-
-    output = candidates[0].get("output", "")
-    if isinstance(output, dict):
-        return output.get("text", "").strip()
-    return str(output).strip()
-
-
-def fallback_recap(transcript: str) -> str:
-    lines = [line.strip() for line in transcript.splitlines() if line.strip()]
-    summary = lines[0] if lines else "Transcript text is unavailable."
-    decisions = ["[To Be Determined] — no confirmed decisions are present in the provided text."]
-    action_items = ["[To Be Determined] — no owners or timelines are included in the transcript."]
-    quotes = []
-    if lines:
-        quotes.append(f"{lines[0]}")  # reuse first line as paraphrased quote
-    if len(lines) > 1:
-        quotes.append(f"{lines[1]}")
-
-    recap_lines = [
-        "Event Summary:",
-        f"- {summary}",
-        "Key Decisions:",
-        *[f"- {decision}" for decision in decisions],
-        "Action Items:",
-        *[f"- {item}" for item in action_items],
-        "Formalized Quotes:",
-        *[f"- {quote}" for quote in quotes],
-        "Note: The output was auto-generated without the Gemini response."
-    ]
-    return "\n".join(recap_lines)
+    response = model.generate_content(user_input)
+    return response.text.strip()
 
 
 def save_output(contents: str, output_path: str) -> None:
@@ -139,8 +96,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        default="gemini-1.5-flash",
-        help="Generative model to call (e.g., gemini-1.5-flash).",
+        default="models/gemini-1.5-flash",
+        help="Generative model to call (e.g., models/gemini-1.5-flash).",
     )
     parser.add_argument(
         "--temperature",
@@ -163,20 +120,13 @@ def main() -> None:
         custom_prompt=args.prompt_template,
     )
 
-    fallback_note = ""
-    try:
-        recap = call_llm(
-            system_instruction=args.system_instruction,
-            user_input=prompt,
-            model_name=args.model,
-            temperature=args.temperature,
-        )
-    except (requests.RequestException, RuntimeError) as err:  # pragma: no cover
-        fallback_note = f"Fallback triggered: {err}"
-        recap = fallback_recap(cleaned_transcript)
+    recap = call_llm(
+        system_instruction=args.system_instruction,
+        user_input=prompt,
+        model_name=args.model,
+    )
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    fallback_line = f"\nFallback note: {fallback_note}" if fallback_note else ""
     structured_output = textwrap.dedent(
         f"""
         === Generated Meeting Record ===
@@ -191,7 +141,6 @@ def main() -> None:
         The model distilled the session into an event summary, identified confirmed decisions, 
         captured action items with owners/timelines, and reformulated quotes into professional prose 
         while flagging unresolved matters as [To Be Determined].
-        {fallback_line}
         """
     ).strip()
 
