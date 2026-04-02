@@ -20,7 +20,7 @@ def build_chain():
 
     # 1. 定义 Prompt
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a professional assistant that summarizes meeting notes clearly and concisely."),
+        ("system", "You are a seasoned executive secretary.Your task is to transform disorganized meeting transcripts into professional briefings.\n To highlight the \"contrast\" in the report, include both the original text length and the compressed length when the task is completed. This provides a clear demonstration of the LLM's value. Additionally, summarize what the LLM did in a few sentences so that users can immediately understand the task that has been completed."),
         ("human", "Please summarize the following meeting notes:\n\n{meeting_notes}")
     ])
 
